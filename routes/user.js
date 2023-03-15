@@ -1,18 +1,24 @@
 const express = require("express");
 const router = express.Router();
-
 const User = require("../models/User");
+const { SHA256 } = require("crypto-js");
+const uid2 = require("uid2");
+
 
 //registration route
 
 router.post("/registration", async (req, res) => {
-    const emailUser = await User.findOne({email: req.body.email});
+    const user = await User.findOne({email: req.body.email});
 
-    const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, salt, hash, admin, token} = req.body;
+    const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin, token} = req.body;
 
-    if(emailUser) {
+    if(user) {
         res.json("Already exists");
     } else {
+
+        const salt = uid2(120)
+        const hashed = SHA256(password + salt);
+
         const newUser = new User({
             name: name,
             lastName: lastName,
@@ -21,9 +27,8 @@ router.post("/registration", async (req, res) => {
             address: address,
             phoneNumber: phoneNumber,
             profilePicture: profilePicture,
-            password: password,
-            // salt: salt,
-            // hash: hash,
+            salt: salt,
+            password: hashed,
             admin: admin,
             token: token,
         })
@@ -35,18 +40,23 @@ router.post("/registration", async (req, res) => {
 // login route
 
 router.post("/login", async (req, res) => {
-    const userEmail = await User.findOne({email: req.body.email});
-    const userPassword = await User.findOne({password: req.body.password});
 
-    if (userEmail && userPassword) {
-        if (userEmail.params == userPassword.params) {
-            res.json("successfully connected")
+    if (req.body.email && req.body.password){
+        const user = await User.findOne({email: req.body.email});
+        if (user) {
+            const password = SHA256(req.body.password + user.salt).toString();
+            if (user.password === password) {
+                res.json("successfully connected");
+            } else {
+                res.json("wrong combination");
+            }
         } else {
-            res.json("wrong combination")
+            res.json("Wrong user or password");
         }
     } else {
-        res.json("User or password doesnt exists")
+        res.json('email or password empty');
     }
+
 });
 
 module.exports = router;
