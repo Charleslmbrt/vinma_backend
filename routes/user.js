@@ -12,9 +12,9 @@ router.post("/registration", async (req, res) => {
 
     const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin, token} = req.body;
 
-    if(user) {
+    if (user) {
         res.json("Already exists");
-    } else {
+    } else if (name && lastName && email && password) {
 
         const salt = uid2(120)
         const hashed = SHA256(password + salt);
@@ -48,7 +48,7 @@ router.post("/login", async (req, res) => {
             if (user.password === password) {
                 res.json("successfully connected");
             } else {
-                res.json("wrong combination");
+                res.json("wrong password");
             }
         } else {
             res.json("Wrong user or password");
@@ -87,6 +87,11 @@ router.put("/modification/:id", async (req, res) => {
         if (req.body.profilePicture) {
             userInfos.profilePicture = req.body.profilePicture;
         }
+        if (req.body.password) {
+            const newPassword = SHA256(req.body.password + userInfos.salt).toString();
+            userInfos.password = newPassword;
+        }
+
         await userInfos.save();
         res.json("user modified");
     } else {
@@ -94,16 +99,5 @@ router.put("/modification/:id", async (req, res) => {
     }
 })
 
-// const modification = (infos) => {
-    // router.put("/modification/:id", async (req, res) => {
-    //     infos.nickName = req.body.nickName;
-    //     infos.email = req.body.email;
-    //     infos.address = req.body.address;
-    //     infos.phoneNumber = req.body.phoneNumber;
-    //     infos.profilePicture = req.body.profilePicture;
-    //     await infos.save();
-    //     res.json(infos);
-    // })
-// }
 
 module.exports = router;
