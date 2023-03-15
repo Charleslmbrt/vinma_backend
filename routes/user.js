@@ -56,6 +56,7 @@ router.post("/login", async (req, res) => {
     } else {
         res.json('email or password empty');
     }
+
 });
 
 //delete route
