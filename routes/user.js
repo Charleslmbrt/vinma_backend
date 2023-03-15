@@ -49,4 +49,51 @@ router.post("/login", async (req, res) => {
     }
 });
 
+    //delete route
+
+    router.delete("/delete/:id", async (req, res) => {
+        await User.findByIdAndDelete(req.params.id);
+        res.json("User deleted");
+      });
+
+    //modification route
+
+    router.put("/modification/:id", async (req, res) => {
+        const userInfos = await User.findById(req.params.id);
+
+        if (userInfos){
+            if (req.body.nickName) {
+                userInfos.nickName = req.body.nickName;
+            }
+            if (req.body.email) {
+                userInfos.email = req.body.email;
+            }
+            if (req.body.address) {
+                userInfos.address = req.body.address;
+            }
+            if (req.body.phoneNumber) {
+                userInfos.phoneNumber = req.body.phoneNumber;
+            }
+            if (req.body.profilePicture) {
+                userInfos.profilePicture = req.body.profilePicture;
+            }
+            await userInfos.save();
+            res.json("user modified");
+        } else {
+            res.json("There's no user");
+        }
+    })
+
+    // const modification = (infos) => {
+        // router.put("/modification/:id", async (req, res) => {
+        //     infos.nickName = req.body.nickName;
+        //     infos.email = req.body.email;
+        //     infos.address = req.body.address;
+        //     infos.phoneNumber = req.body.phoneNumber;
+        //     infos.profilePicture = req.body.profilePicture;
+        //     await infos.save();
+        //     res.json(infos);
+        // })
+    // }
+
 module.exports = router;
