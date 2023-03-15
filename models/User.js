@@ -18,9 +18,8 @@ const User = mongoose.model("User", {
         }
     ],
     profilePicture: String,
+    salt: String,
     password: String,
-    // salt: String,
-    // hash: String,
     admin: Number,
     token: String,
 });
