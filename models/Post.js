@@ -6,7 +6,7 @@ const Post = mongoose.model("Post", {
     category: String,
     subCategory: String,
     price: Number,
-    pictures: {
+    images: {
         default: [],
         type: Array,
     },
