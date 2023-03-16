@@ -17,7 +17,7 @@ const auth = require('../middleware/auth');
 
 //registration route
 
-router.post("/registration", auth, async (req, res) => {
+router.post("/registration",  async (req, res) => {
     const user = await User.findOne({email: req.body.email});
 
     const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin} = req.body;
@@ -75,28 +75,17 @@ router.put("/login", async (req, res) => {
             const password = SHA256(req.body.password + user.salt).toString();
             if (user.password === password) {
 
+               
+                const token = jwt.sign(
+                    { userId: user._id },
+                    'RANDOM_TOKEN_SECRET',
+                    { expiresIn: '24h' }
+                );
+
                 res.status(200).json({
                     userId: user._id,
-                    token: jwt.sign(
-                        { userId: user._id },
-                        'RANDOM_TOKEN_SECRET',
-                        { expiresIn: '24h' }
-                    )
+                    token: token
                 });
-             
-                // const newToken = {token: jwt.sign(
-                //     {userId: user._id},
-                //     'RANDOM_TOKEN_SECRET',
-                //     {expiresIn: "24h"}
-                // )};
-                // user.token = newToken;
-                // user.save();
-
-                // if (user.token) {
-                //     res.json(user.token);
-                // } else {
-                //     res.json("token failed");
-                // }
 
             } else {
                 res.json("wrong password");
