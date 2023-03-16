@@ -61,7 +61,7 @@ router.post("/login", async (req, res) => {
 
 //delete route
 
-router.delete("/delete/:id", async (req, res) => {
+router.delete("/delete-user/:id", async (req, res) => {
     await User.findByIdAndDelete(req.params.id);
     res.json("User deleted");
     });

@@ -17,6 +17,14 @@ router.post('/publication', async (req, res) => {
         res.json('post created');
 });
 
+//delete post route
+
+router.delete("/delete-post/:id", async (req, res) => {
+    await Post.findByIdAndDelete(req.params.id);
+    res.json("Post deleted");
+});
+
+
 // read all post route
 
 router.get("/read-all-posts", async (req, res) => {
