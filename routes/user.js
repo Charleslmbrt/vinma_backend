@@ -28,9 +28,10 @@ router.post("/registration", async (req, res) => {
         //handle pasword
         const salt = uid2(120)
         const hashed = SHA256(password + salt);
-        const publicId = email + 'profilePicture'
+        
 
         //handle profilePicture
+        const publicId = email + 'profilePicture'
         const result = cloudinary.uploader.upload(profilePicture, {public_id: publicId})
         result.then((data) => {
             console.log(data);
