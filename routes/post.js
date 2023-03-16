@@ -16,4 +16,27 @@ router.post('/publication', async (req, res) => {
         await newPost.save();
         res.json('post created');
 });
+
+// read all post route
+
+router.get("/read-all-posts", async (req, res) => {
+    const findPosts = await Post.find();
+    if (findPosts) {
+        res.json(findPosts)
+    } else {
+        res.json("pas bien")
+    }
+})
+
+// read one post route 
+
+router.get("/read-one-post/:id", async (req, res) => {
+    const findPost = await Post.findById(req.params.id);
+    if (findPost) {
+        res.json(findPost)
+    } else {
+        res.json("pas bien")
+    }
+})
+
 module.exports = router;
