@@ -21,7 +21,6 @@ const User = mongoose.model("User", {
     salt: String,
     password: String,
     admin: Number,
-    token: String,
 });
 
 module.exports = User;
