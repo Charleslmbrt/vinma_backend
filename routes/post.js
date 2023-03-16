@@ -46,5 +46,3 @@ router.get("/read-one-post/:id", async (req, res) => {
         res.json("pas bien")
     }
 })
-
-module.exports = router;
