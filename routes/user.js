@@ -13,11 +13,11 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
 const jwt = require('jsonwebtoken');
-
+const auth = require('../middleware/auth');
 
 //registration route
 
-router.post("/registration", async (req, res) => {
+router.post("/registration", auth, async (req, res) => {
     const user = await User.findOne({email: req.body.email});
 
     const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin} = req.body;
@@ -119,7 +119,7 @@ router.delete("/delete-user/:id", async (req, res) => {
 
 //modification route
 
-router.put("/modification/:id", async (req, res) => {
+router.put("/modification/:id", auth, async (req, res) => {
     const userInfos = await User.findById(req.params.id);
 
     if (userInfos){
