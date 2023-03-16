@@ -85,3 +85,36 @@ router.get("/read-one-post/:id", async (req, res) => {
         res.json("pas bien")
     }
 })
+
+//modification route
+
+router.put("/postModification/:id", async (req, res) => {
+    const postInfos = await Post.findById(req.params.id);
+    console.log(postInfos)
+    if (postInfos){
+        if (req.body.title) {
+            postInfos.title = req.body.title;
+        }
+        if (req.body.description) {
+            postInfos.description = req.body.description;
+        }
+        if (req.body.subCategory) {
+            postInfos.subCategory = req.body.subCategory;
+        }
+        if (req.body.category) {
+            postInfos.category = req.body.category;
+        }
+        if (req.body.price) {
+            postInfos.price = req.body.price;
+        }
+        
+
+        await postInfos.save();
+        res.json("post modified");
+    } else {
+        res.json("Missing required fields to post");
+        console.log("hello word")
+    }
+})
+
+module.exports = router;
