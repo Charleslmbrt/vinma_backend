@@ -14,8 +14,8 @@ mongoose.connect("mongodb://localhost/vinma").then(() => {
 const userRoutes = require('./routes/user');
 app.use(userRoutes);
 
-// const postRoutes = require('./routes/post');
-// app.use(postRoutes);
+const postRoutes = require('./routes/post');
+app.use(postRoutes);
 
 app.listen(8080, () => {
     console.log("Server has started");
