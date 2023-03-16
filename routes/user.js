@@ -12,6 +12,7 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
+const jwt = require('jsonwebtoken');
 
 
 //registration route
@@ -19,7 +20,7 @@ cloudinary.config({
 router.post("/registration", async (req, res) => {
     const user = await User.findOne({email: req.body.email});
 
-    const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin, token} = req.body;
+    const {name, lastName, nickName, email, address, phoneNumber, profilePicture, password, admin} = req.body;
 
     if (user) {
         res.json("Already exists");
@@ -57,7 +58,6 @@ router.post("/registration", async (req, res) => {
             salt: salt,
             password: hashed,
             admin: admin,
-            token: token,
             profilePicture: imageUrl
         })
         await newUser.save();
@@ -67,14 +67,37 @@ router.post("/registration", async (req, res) => {
 
 // login route
 
-router.post("/login", async (req, res) => {
+router.put("/login", async (req, res) => {
 
     if (req.body.email && req.body.password){
         const user = await User.findOne({email: req.body.email});
         if (user) {
             const password = SHA256(req.body.password + user.salt).toString();
             if (user.password === password) {
-                res.json("successfully connected");
+
+                res.status(200).json({
+                    userId: user._id,
+                    token: jwt.sign(
+                        { userId: user._id },
+                        'RANDOM_TOKEN_SECRET',
+                        { expiresIn: '24h' }
+                    )
+                });
+             
+                // const newToken = {token: jwt.sign(
+                //     {userId: user._id},
+                //     'RANDOM_TOKEN_SECRET',
+                //     {expiresIn: "24h"}
+                // )};
+                // user.token = newToken;
+                // user.save();
+
+                // if (user.token) {
+                //     res.json(user.token);
+                // } else {
+                //     res.json("token failed");
+                // }
+
             } else {
                 res.json("wrong password");
             }
