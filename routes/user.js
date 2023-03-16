@@ -3,6 +3,15 @@ const router = express.Router();
 const User = require("../models/User");
 const { SHA256 } = require("crypto-js");
 const uid2 = require("uid2");
+require('dotenv').config()
+
+
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+    cloud_name: process.env.CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
 
 
 //registration route
@@ -16,8 +25,25 @@ router.post("/registration", async (req, res) => {
         res.json("Already exists");
     } else if (name && lastName && email && password) {
 
+        //handle pasword
         const salt = uid2(120)
         const hashed = SHA256(password + salt);
+        const publicId = email + 'profilePicture'
+
+        //handle profilePicture
+        const result = cloudinary.uploader.upload(profilePicture, {public_id: publicId})
+        result.then((data) => {
+            console.log(data);
+            console.log(data.secure_url);
+        }).catch((err) => {
+            console.log(err);
+        });
+        const imageUrl = cloudinary.url(publicId, {
+            // width: 100,
+            // height: 150,
+            // Crop: 'fill'
+        });
+
 
         const newUser = new User({
             name: name,
@@ -31,6 +57,7 @@ router.post("/registration", async (req, res) => {
             password: hashed,
             admin: admin,
             token: token,
+            profilePicture: imageUrl
         })
         await newUser.save();
         res.json('user created');
