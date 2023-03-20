@@ -1,120 +1,156 @@
 const express = require("express");
 const router = express.Router();
-const Post = require("../models/Post");
 
-const cloudinary = require('cloudinary').v2;
+//import models
+const Post = require("../models/Post");
+const User = require("../models/User");
+
+const cloudinary = require("cloudinary").v2;
 cloudinary.config({
-    cloud_name: process.env.CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Convert buffer as base64 format
+const convertToBase64 = (file) => {
+  return `data:${file.mimetype};base64,${file.data.toString("base64")}`;
+};
+
+const auth = require("../middleware/auth");
 
 // Publication route
+router.post("/publication", auth, async (req, res) => {
+  try {
+    const { title, description, category, subCategory, price } = req.body;
 
-router.post('/publication', async (req, res) => {
-    const {title, description, category, subCategory, price, images} = req.body;
+    if (title && description && category && subCategory && price) {
+      const newPost = new Post({
+        title: title,
+        description: description,
+        category: category,
+        subCategory: subCategory,
+        price: price,
+      });
 
-    //handle profilePicture
-    const image1 = images[0];
-    const publicId1 = title + '1';
-    const image2 = images[1];
-    const publicId2 = title + '2';
-    const image3 = images[2];
-    const publicId3 = title + '3';
-    const image4 = images[3];
-    const publicId4 = title + '4';
-    let imageUrl2 = '';
-    let imageUrl3 = '';
-    let imageUrl4 = '';
+      const result = await cloudinary.uploader.upload(
+        convertToBase64(req.files.images),
+        {
+          folder: `posts/${newPost._id}`,
+        }
+      );
 
-    cloudinary.uploader.upload(image1, {public_id: publicId1})
-    const imageUrl1 = cloudinary.url(publicId1, {});
+      newPost.images = result;
 
-    if (image2){
-        cloudinary.uploader.upload(image2, {public_id: publicId2})
-        imageUrl2 = cloudinary.url(publicId2, {});
+      await newPost.save();
+
+      res.json(newPost);
+    } else {
+      res.status(400).json(err("Parameters missing"));
     }
-    
-    if (image3){
-        cloudinary.uploader.upload(image3, {public_id: publicId3})
-        imageUrl3 = cloudinary.url(publicId3, {});
-    }
-    if (image4){
-        cloudinary.uploader.upload(image4, {public_id: publicId4})
-        imageUrl4 = cloudinary.url(publicId4, {});
-    }
-    
-        const newPost = new Post({
-            title: title,
-            description: description,
-            category: category,
-            subCategory: subCategory,
-            price: price,
-            images: [imageUrl1, imageUrl2, imageUrl3, imageUrl4]
-    })
-        await newPost.save();
-        res.json('post created');
+  } catch (error) {
+    res.status(400).json(err(error.message));
+  }
 });
 
 //delete post route
+router.delete("/delete-post/:id", auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
 
-router.delete("/delete-post/:id", async (req, res) => {
-    await Post.findByIdAndDelete(req.params.id);
-    res.json("Post deleted");
+    if (post) {
+      const userId = req.user._id;
+      const postUserId = post.owner;
+
+      if (String(userId) === String(postUserId)) {
+        await Post.findByIdAndDelete(req.params.id);
+
+        const user = await User.findById(userId);
+
+        let arrayPosts = user.posts;
+        let indexOfPost = arrayPosts.indexOf(req.params.id);
+        arrayPosts.splice(indexOfPost, 1);
+
+        await User.findByIdAndUpdate(userId, { posts: arrayPosts });
+        res.json("Post deleted");
+      } else {
+        res.status(400).json(err("Unauthorized"));
+      }
+    } else {
+      res.status(400).json("Post not found");
+    }
+  } catch (error) {
+    res.status(400).json(err(error.message));
+  }
 });
-
 
 // read all post route
 
 router.get("/read-all-posts", async (req, res) => {
-    const findPosts = await Post.find();
+  try {
+    const findPosts = await Post.find({}).populate({
+      path: "owner",
+      select: "nickName profilePicture",
+    });
     if (findPosts) {
-        res.json(findPosts)
+      res.json(findPosts);
     } else {
-        res.json("pas bien")
+      res.json("Posts not found");
     }
-})
+  } catch (error) {
+    res.status(400).json(err(error.message));
+  }
+});
 
-// read one post route 
+// read one post route
 
 router.get("/read-one-post/:id", async (req, res) => {
-    const findPost = await Post.findById(req.params.id);
-    if (findPost) {
-        res.json(findPost)
+  try {
+    if (req.params.id) {
+      const findPost = await Post.findById(req.params.id).populate({
+        path: "owner",
+        select: "nickName profilePicture",
+      });
+      if (findPost) {
+        res.json(findPost);
+      } else {
+        res.json("Post not found");
+      }
     } else {
-        res.json("pas bien")
+      res.status(400).json(err("Missing post id"));
     }
-})
+  } catch (error) {
+    res.status(400).json(err(error.message));
+  }
+});
 
 //modification route
 
-router.put("/postModification/:id", async (req, res) => {
-    const postInfos = await Post.findById(req.params.id);
-    console.log(postInfos)
-    if (postInfos){
-        if (req.body.title) {
-            postInfos.title = req.body.title;
-        }
-        if (req.body.description) {
-            postInfos.description = req.body.description;
-        }
-        if (req.body.subCategory) {
-            postInfos.subCategory = req.body.subCategory;
-        }
-        if (req.body.category) {
-            postInfos.category = req.body.category;
-        }
-        if (req.body.price) {
-            postInfos.price = req.body.price;
-        }
-        
+router.put("/postModification/:id", auth, async (req, res) => {
+  const postInfos = await Post.findById(req.params.id);
 
-        await postInfos.save();
-        res.json("post modified");
-    } else {
-        res.json("Missing required fields to post");
-        console.log("hello word")
+  if (postInfos) {
+    if (req.body.title) {
+      postInfos.title = req.body.title;
     }
-})
+    if (req.body.description) {
+      postInfos.description = req.body.description;
+    }
+    if (req.body.subCategory) {
+      postInfos.subCategory = req.body.subCategory;
+    }
+    if (req.body.category) {
+      postInfos.category = req.body.category;
+    }
+    if (req.body.price) {
+      postInfos.price = req.body.price;
+    }
+
+    await postInfos.save();
+    res.json("Post modified");
+  } else {
+    res.json("Post not found");
+  }
+});
 
 module.exports = router;

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const { SHA256 } = require("crypto-js");
+const encBase64 = require("crypto-js/enc-base64");
 const uid2 = require("uid2");
 require("dotenv").config();
 
@@ -11,6 +12,7 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 const jwt = require("jsonwebtoken");
 const auth = require("../middleware/auth");
 
@@ -22,115 +24,99 @@ const convertToBase64 = (file) => {
 //registration route
 
 router.post("/signup", async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
+  try {
+    const { name, lastName, nickName, email, address, phoneNumber, password } =
+      req.body;
 
-  const {
-    name,
-    lastName,
-    nickName,
-    email,
-    address,
-    phoneNumber,
-    profilePicture,
-    password,
-    admin,
-  } = req.body;
+    const user = await User.findOne({ email: email });
 
-  if (user) {
-    res.json("Already exists");
-  } else if (name && lastName && email && password) {
-    //handle pasword
-    const salt = uid2(120);
-    const hashed = SHA256(password + salt);
+    if (user) {
+      res.json("Already exists");
+    } else if (name && lastName && email && password) {
+      //handle pasword
+      const salt = uid2(120);
+      const hashed = SHA256(password + salt).toString(encBase64);
 
-    // admin
-    const admin = 0;
+      // admin
+      const admin = 0;
 
-    //handle profilePicture
-    // const publicId = email + "profilePicture";
-    // const result = cloudinary.uploader.upload(profilePicture, {
-    //   public_id: publicId,
-    // });
-    // result
-    //   .then((data) => {
-    //     console.log(data);
-    //     console.log(data.secure_url);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
-    // const imageUrl = cloudinary.url(publicId, {
-    //   // width: 100,
-    //   // height: 150,
-    //   // Crop: 'fill'
-    // });
+      const newUser = new User({
+        name: name,
+        lastName: lastName,
+        nickName: nickName,
+        email: email,
+        address: address,
+        phoneNumber: phoneNumber,
+        salt: salt,
+        password: hashed,
+        admin: admin,
+      });
 
-    const newUser = new User({
-      name: name,
-      lastName: lastName,
-      nickName: nickName,
-      email: email,
-      address: address,
-      phoneNumber: phoneNumber,
-      salt: salt,
-      password: hashed,
-      admin: admin,
-      // profilePicture: result,
-    });
+      const result = await cloudinary.uploader.upload(
+        convertToBase64(req.files.profilePicture),
+        {
+          folder: `avatar/${newUser._id}`,
+        }
+      );
 
-    const result = await cloudinary.uploader.upload(
-      convertToBase64(req.files.profilePicture),
-      {
-        folder: `airbnb/${newUser._id}`,
-      }
-    );
+      newUser.profilePicture = result;
 
-    newUser.profilePicture = result;
-
-    console.log(result);
-    await newUser.save();
-    res.json({
-      name: name,
-      lastName: lastName,
-      nickName: nickName,
-      email: email,
-      address: address,
-      phoneNumber: phoneNumber,
-      profilePicture: result,
-    });
+      await newUser.save();
+      res.json({
+        name: name,
+        lastName: lastName,
+        nickName: nickName,
+        email: email,
+        address: address,
+        phoneNumber: phoneNumber,
+        profilePicture: result,
+      });
+    } else {
+      res.status(400).json("All fields are required");
+    }
+  } catch (error) {
+    res.status(400).json(err(error.message));
   }
 });
 
 // login route
 
 router.put("/login", async (req, res) => {
-  if (req.body.email && req.body.password) {
-    const user = await User.findOne({ email: req.body.email });
-    if (user) {
-      const password = SHA256(req.body.password + user.salt).toString();
-      if (user.password === password) {
-        const token = jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
-          expiresIn: "24h",
-        });
+  try {
+    const { email, password } = req.body;
 
-        res.status(200).json({
-          userId: user._id,
-          token: token,
-        });
+    if (email && password) {
+      const user = await User.findOne({ email: email });
+
+      if (user) {
+        const checkPassword = SHA256(password + user.salt).toString(encBase64);
+
+        if (user.password === checkPassword) {
+          const token = jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
+            expiresIn: "24h",
+          });
+
+          res.status(200).json({
+            userId: user._id,
+            token: token,
+          });
+        } else {
+          res.json("Unauthorized");
+        }
       } else {
-        res.json("wrong password");
+        res.json("Wrong user or password");
       }
     } else {
-      res.json("Wrong user or password");
+      res.json("All fields are required");
     }
-  } else {
-    res.json("email or password empty");
+  } catch (error) {
+    res.status(400).json(err(error.message));
   }
 });
 
 //delete route
 
-router.delete("/delete-user/:id", async (req, res) => {
+router.delete("/delete-user/:id", auth, async (req, res) => {
   await User.findByIdAndDelete(req.params.id);
   res.json("User deleted");
 });
@@ -138,33 +124,46 @@ router.delete("/delete-user/:id", async (req, res) => {
 //modification route
 
 router.put("/modification/:id", auth, async (req, res) => {
+  const { nickName, email, address, phoneNumber, profilePicture, password } =
+    req.body;
+
   const userInfos = await User.findById(req.params.id);
 
   if (userInfos) {
     if (req.body.nickName) {
-      userInfos.nickName = req.body.nickName;
+      userInfos.nickName = nickName;
     }
     if (req.body.email) {
-      userInfos.email = req.body.email;
+      userInfos.email = email;
     }
     if (req.body.address) {
-      userInfos.address = req.body.address;
+      userInfos.address = address;
     }
     if (req.body.phoneNumber) {
-      userInfos.phoneNumber = req.body.phoneNumber;
+      userInfos.phoneNumber = phoneNumber;
     }
     if (req.body.profilePicture) {
-      userInfos.profilePicture = req.body.profilePicture;
+      userInfos.profilePicture = profilePicture;
     }
     if (req.body.password) {
-      const newPassword = SHA256(req.body.password + userInfos.salt).toString();
+      const newPassword = SHA256(password + userInfos.salt).toString(encBase64);
       userInfos.password = newPassword;
     }
 
     await userInfos.save();
-    res.json("user modified");
+
+    res.json("User modified");
   } else {
-    res.json("There's no user");
+    res.json("User not found");
+  }
+});
+
+router.get("/userinfos/:id", auth, async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (user) {
+    res.json(user);
+  } else {
+    res.json("user not found");
   }
 });
 
