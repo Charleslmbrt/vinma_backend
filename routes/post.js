@@ -22,7 +22,18 @@ const auth = require("../middleware/auth");
 // Publication route
 router.post("/publication", auth, async (req, res) => {
   try {
-    const { title, description, category, subCategory, price } = req.body;
+    const {
+      title,
+      description,
+      category,
+      subCategory,
+      price,
+      color,
+      brand,
+      dimensions,
+    } = req.body;
+
+    const state = "en ligne";
 
     if (title && description && category && subCategory && price) {
       const newPost = new Post({
@@ -31,6 +42,12 @@ router.post("/publication", auth, async (req, res) => {
         category: category,
         subCategory: subCategory,
         price: price,
+        options: {
+          color: color,
+          brand: brand,
+          state: state,
+          dimensions: dimensions,
+        },
       });
 
       const result = await cloudinary.uploader.upload(
@@ -88,10 +105,53 @@ router.delete("/delete-post/:id", auth, async (req, res) => {
 
 router.get("/read-all-posts", async (req, res) => {
   try {
-    const findPosts = await Post.find({}).populate({
-      path: "owner",
-      select: "nickName profilePicture",
-    });
+    let filters = {};
+
+    if (req.query.category) {
+      filters.category = new RegExp(req.query.category, "i");
+    }
+
+    if (req.query.subCategory) {
+      filters.subCategory = new RegExp(req.query.subCategory, "i");
+    }
+
+    if (req.query.color) {
+      filters.color = new RegExp(req.query.color, "i");
+    }
+
+    if (req.query.priceMin) {
+      filters.price = { $gte: req.query.priceMin };
+    }
+
+    if (req.query.priceMax) {
+      filters.price = { $lte: req.query.priceMax };
+    }
+
+    let sort = {};
+
+    if (req.query.sort === "price-desc") {
+      sort = { price: -1 };
+    } else if (req.query.sort === "price-asc") {
+      sort = { price: 1 };
+    }
+
+    let page;
+    if (Number(req.query.page) < 1) {
+      page = 1;
+    } else {
+      page = Number(req.query.page);
+    }
+
+    let limit = 3;
+
+    const findPosts = await Post.find(filters)
+      .populate({
+        path: "owner",
+        select: "nickName profilePicture",
+      })
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit);
     if (findPosts) {
       res.json(findPosts);
     } else {
@@ -127,29 +187,33 @@ router.get("/read-one-post/:id", async (req, res) => {
 //modification route
 
 router.put("/postModification/:id", auth, async (req, res) => {
-  const postInfos = await Post.findById(req.params.id);
+  try {
+    const postInfos = await Post.findById(req.params.id);
 
-  if (postInfos) {
-    if (req.body.title) {
-      postInfos.title = req.body.title;
-    }
-    if (req.body.description) {
-      postInfos.description = req.body.description;
-    }
-    if (req.body.subCategory) {
-      postInfos.subCategory = req.body.subCategory;
-    }
-    if (req.body.category) {
-      postInfos.category = req.body.category;
-    }
-    if (req.body.price) {
-      postInfos.price = req.body.price;
-    }
+    if (postInfos) {
+      if (req.body.title) {
+        postInfos.title = req.body.title;
+      }
+      if (req.body.description) {
+        postInfos.description = req.body.description;
+      }
+      if (req.body.subCategory) {
+        postInfos.subCategory = req.body.subCategory;
+      }
+      if (req.body.category) {
+        postInfos.category = req.body.category;
+      }
+      if (req.body.price) {
+        postInfos.price = req.body.price;
+      }
 
-    await postInfos.save();
-    res.json("Post modified");
-  } else {
-    res.json("Post not found");
+      await postInfos.save();
+      res.json("Post modified");
+    } else {
+      res.json("Post not found");
+    }
+  } catch (error) {
+    res.status(400).json(err(error.message));
   }
 });
 
