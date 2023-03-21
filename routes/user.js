@@ -127,40 +127,43 @@ router.delete("/delete-user/:id", auth, async (req, res) => {
 });
 
 //modification route
-
 router.put("/modification/:id", auth, async (req, res) => {
-  const { nickName, email, address, phoneNumber, profilePicture, password } =
-    req.body;
-
+  const {
+    lastName,
+    name,
+    nickName,
+    email,
+    address,
+    phoneNumber,
+    profilePicture,
+    password,
+  } = req.body;
   try {
     const userInfos = await User.findById(req.params.id);
-
     if (userInfos) {
-      if (req.body.nickName) {
-        userInfos.nickName = nickName;
+      if (name || email || address || lastName || password) {
+        const obj = {};
+        if (email) {
+          obj.email = email;
+        }
+        if (address) {
+          obj.address = address;
+        }
+        if (name) {
+          obj.name = name;
+        }
+        if (lastName) {
+          obj.lastName = lastName;
+        }
+        if (password) {
+          const newPassword = SHA256(password + userInfos.salt).toString(
+            encBase64
+          );
+          obj.password = newPassword;
+        }
+        await User.findByIdAndUpdate(userInfos.id, obj);
+        res.json("User modified");
       }
-      if (req.body.email) {
-        userInfos.email = email;
-      }
-      if (req.body.address) {
-        userInfos.address = address;
-      }
-      if (req.body.phoneNumber) {
-        userInfos.phoneNumber = phoneNumber;
-      }
-      if (req.body.profilePicture) {
-        userInfos.profilePicture = profilePicture;
-      }
-      if (req.body.password) {
-        const newPassword = SHA256(password + userInfos.salt).toString(
-          encBase64
-        );
-        userInfos.password = newPassword;
-      }
-
-      await userInfos.save();
-
-      res.json("User modified");
     } else {
       res.json("User not found");
     }
