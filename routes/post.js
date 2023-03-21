@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const fileUpload = require("express-fileupload");
+const auth = require("../middleware/auth");
 
 //import models
 const Post = require("../models/Post");
@@ -17,10 +19,8 @@ const convertToBase64 = (file) => {
   return `data:${file.mimetype};base64,${file.data.toString("base64")}`;
 };
 
-const auth = require("../middleware/auth");
-
 // Publication route
-router.post("/publication", auth, async (req, res) => {
+router.post("/publication", fileUpload(), auth, async (req, res) => {
   try {
     const {
       title,
@@ -66,7 +66,7 @@ router.post("/publication", auth, async (req, res) => {
       res.status(400).json(err("Parameters missing"));
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
@@ -97,7 +97,7 @@ router.delete("/delete-post/:id", auth, async (req, res) => {
       res.status(400).json("Post not found");
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
@@ -158,7 +158,7 @@ router.get("/read-all-posts", async (req, res) => {
       res.json("Posts not found");
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
@@ -180,7 +180,7 @@ router.get("/read-one-post/:id", async (req, res) => {
       res.status(400).json(err("Missing post id"));
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
@@ -213,7 +213,7 @@ router.put("/postModification/:id", auth, async (req, res) => {
       res.json("Post not found");
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 

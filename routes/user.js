@@ -5,6 +5,7 @@ const { SHA256 } = require("crypto-js");
 const encBase64 = require("crypto-js/enc-base64");
 const uid2 = require("uid2");
 require("dotenv").config();
+const fileUpload = require("express-fileupload");
 
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
@@ -23,7 +24,7 @@ const convertToBase64 = (file) => {
 
 //registration route
 
-router.post("/signup", async (req, res) => {
+router.post("/signup", fileUpload(), async (req, res) => {
   try {
     const { name, lastName, nickName, email, address, phoneNumber, password } =
       req.body;
@@ -75,7 +76,7 @@ router.post("/signup", async (req, res) => {
       res.status(400).json("All fields are required");
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
@@ -110,15 +111,19 @@ router.put("/login", async (req, res) => {
       res.json("All fields are required");
     }
   } catch (error) {
-    res.status(400).json(err(error.message));
+    res.status(400).json(error.message);
   }
 });
 
 //delete route
 
 router.delete("/delete-user/:id", auth, async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  res.json("User deleted");
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json("User deleted");
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
 });
 
 //modification route
@@ -127,43 +132,53 @@ router.put("/modification/:id", auth, async (req, res) => {
   const { nickName, email, address, phoneNumber, profilePicture, password } =
     req.body;
 
-  const userInfos = await User.findById(req.params.id);
+  try {
+    const userInfos = await User.findById(req.params.id);
 
-  if (userInfos) {
-    if (req.body.nickName) {
-      userInfos.nickName = nickName;
-    }
-    if (req.body.email) {
-      userInfos.email = email;
-    }
-    if (req.body.address) {
-      userInfos.address = address;
-    }
-    if (req.body.phoneNumber) {
-      userInfos.phoneNumber = phoneNumber;
-    }
-    if (req.body.profilePicture) {
-      userInfos.profilePicture = profilePicture;
-    }
-    if (req.body.password) {
-      const newPassword = SHA256(password + userInfos.salt).toString(encBase64);
-      userInfos.password = newPassword;
-    }
+    if (userInfos) {
+      if (req.body.nickName) {
+        userInfos.nickName = nickName;
+      }
+      if (req.body.email) {
+        userInfos.email = email;
+      }
+      if (req.body.address) {
+        userInfos.address = address;
+      }
+      if (req.body.phoneNumber) {
+        userInfos.phoneNumber = phoneNumber;
+      }
+      if (req.body.profilePicture) {
+        userInfos.profilePicture = profilePicture;
+      }
+      if (req.body.password) {
+        const newPassword = SHA256(password + userInfos.salt).toString(
+          encBase64
+        );
+        userInfos.password = newPassword;
+      }
 
-    await userInfos.save();
+      await userInfos.save();
 
-    res.json("User modified");
-  } else {
-    res.json("User not found");
+      res.json("User modified");
+    } else {
+      res.json("User not found");
+    }
+  } catch (error) {
+    res.status(400).json(error.message);
   }
 });
 
 router.get("/userinfos/:id", auth, async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (user) {
-    res.json(user);
-  } else {
-    res.json("user not found");
+  try {
+    const user = await User.findById(req.params.id);
+    if (user) {
+      res.json(user);
+    } else {
+      res.json("user not found");
+    }
+  } catch (error) {
+    res.status(400).json(error.message);
   }
 });
 
