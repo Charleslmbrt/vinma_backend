@@ -22,41 +22,34 @@ const convertToBase64 = (file) => {
 // Publication route
 router.post("/publication", fileUpload(), auth, async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      category,
-      subCategory,
-      price,
-      color,
-      brand,
-      dimensions,
-    } = req.body;
+    const { title, description, category, price, brand, dimensions } = req.body;
 
     const state = "en ligne";
 
-    if (title && description && category && subCategory && price) {
+    if (title && description && category && price) {
       const newPost = new Post({
         title: title,
         description: description,
         category: category,
-        subCategory: subCategory,
         price: price,
         options: {
-          color: color,
           brand: brand,
-          state: state,
           dimensions: dimensions,
         },
-        owner: req.user._id,
       });
 
-      const result = await cloudinary.uploader.upload(
-        convertToBase64(req.files.images),
-        {
-          folder: `posts/${newPost._id}`,
-        }
-      );
+      const images = req.files.images;
+      let result = [];
+
+      for (let i = 0; i < images.length; i++) {
+        const imageProcessed = await cloudinary.uploader.upload(
+          convertToBase64(images[i]),
+          {
+            folder: `posts/${i + newPost._id}`,
+          }
+        );
+        result.push(imageProcessed);
+      }
 
       newPost.images = result;
 
@@ -64,7 +57,7 @@ router.post("/publication", fileUpload(), auth, async (req, res) => {
 
       res.json(newPost);
     } else {
-      res.status(400).json(err("Parameters missing"));
+      res.status(400).json("Parameters missing");
     }
   } catch (error) {
     res.status(400).json(error.message);
