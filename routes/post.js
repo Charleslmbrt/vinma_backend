@@ -96,7 +96,6 @@ router.delete("/delete-post/:id", auth, async (req, res) => {
 });
 
 // read all post route
-
 router.get("/read-all-posts", async (req, res) => {
   try {
     let filters = {};
@@ -136,7 +135,7 @@ router.get("/read-all-posts", async (req, res) => {
       page = Number(req.query.page);
     }
 
-    let limit = 3;
+    let limit = 100;
 
     const findPosts = await Post.find(filters)
       .populate({
