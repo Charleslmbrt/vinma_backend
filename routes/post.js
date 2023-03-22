@@ -48,6 +48,7 @@ router.post("/publication", fileUpload(), auth, async (req, res) => {
           state: state,
           dimensions: dimensions,
         },
+        owner: req.user._id,
       });
 
       const result = await cloudinary.uploader.upload(
