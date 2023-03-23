@@ -37,7 +37,7 @@ router.post("/publication", fileUpload(), auth, async (req, res) => {
           brand: brand,
           dimensions: dimensions,
         },
-        owner: req.auth,
+        owner: req.auth.userId,
       });
 
       for (let i = 0; i < images.length; i++) {

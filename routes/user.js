@@ -98,6 +98,10 @@ router.put("/login", async (req, res) => {
           });
 
           res.status(200).json({
+            name: user.name,
+            lastName: user.lastName,
+            nickName: user.nickName,
+            profilePicture: user.profilePicture,
             userId: user._id,
             token: token,
           });
