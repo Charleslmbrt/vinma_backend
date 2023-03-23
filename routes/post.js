@@ -24,9 +24,10 @@ router.post("/publication", fileUpload(), auth, async (req, res) => {
   try {
     const { title, description, category, price, brand, dimensions } = req.body;
 
-    const state = "en ligne";
+    const images = req.files.images;
+    let result = [];
 
-    if (title && description && category && price) {
+    if (title && description && category && price && images) {
       const newPost = new Post({
         title: title,
         description: description,
@@ -36,10 +37,8 @@ router.post("/publication", fileUpload(), auth, async (req, res) => {
           brand: brand,
           dimensions: dimensions,
         },
+        owner: req.auth,
       });
-
-      const images = req.files.images;
-      let result = [];
 
       for (let i = 0; i < images.length; i++) {
         const imageProcessed = await cloudinary.uploader.upload(
